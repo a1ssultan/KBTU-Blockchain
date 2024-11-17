@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rock Paper Scissors Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #007bff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        #game-container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        button {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1rem;
+            color: #fff;
+            background-color: #007bff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        button:active {
+            background-color: #004085;
+            transform: scale(1);
+        }
+
+        .image-template {
+            width: 300px;
+            height: 200px;
+            margin: 20px auto;
+            background-size: cover;
+            background-position: center;
+            border-radius: 10px;
+            border: 2px solid #ccc;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 1.1rem;
+            color: #555;
+        }
+
+        #history {
+            margin-top: 30px;
+            font-size: 1rem;
+            color: #333;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 10px 0;
+            padding: 5px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            #game-container {
+                padding: 20px;
+            }
+
+            button {
+                padding: 12px 25px;
+            }
+
+            .image-template {
+                width: 80px;
+                height: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <h1>Rock-Paper-Scissors Game</h1>
+
+    <div>
+        <button onclick="createGame()">Create Game</button>
+        <button onclick="joinGame()">Join Game</button>
+    </div>
+
+    <div id="choice-buttons" style="display: none;">
+        <p>Select your choice:</p>
+        <button onclick="makeChoice('Rock')">🪨 Rock</button>
+        <button onclick="makeChoice('Paper')">📃 Paper</button>
+        <button onclick="makeChoice('Scissors')">✂️ Scissors</button>
+    </div>
+
+    <div id="status"></div>
+
+    <div class="image-template" style="background-image: url('https://img.freepik.com/premium-vector/hands-playing-rock-paper-scissors-game-flat-design-style-vector-illustration_540284-598.jpg?w=360');"></div>
+
+    <div id="history"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+<script>
+    const contractABI = [
+    {
+        "inputs": [],
+        "name": "createGame",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "gameId",
+                "type": "uint256"
+            }
+        ],
+        "name": "joinGame",
+        "outputs": [],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "gameId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "_choice",
+                "type": "uint8"
+            }
+        ],
+        "name": "player1MakeChoice",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "player1Choice",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "player2Choice",
+                "type": "uint8"
+            },
+            {
+                "indexed": false,
+                "internalType": "enum RockPaperScissors.GameResult",
+                "name": "result",
+                "type": "uint8"
+            }
+        ],
+        "name": "GameResolved",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "gameId",
+                "type": "uint256"
+            },
+            {
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "_choice",
+                "type": "uint8"
+            }
+        ],
+        "name": "player2MakeChoice",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "stateMutability": "payable",
+        "type": "receive"
+    },
+    {
+        "inputs": [],
+        "name": "betAmount",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "gameIdCounter",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "games",
+        "outputs": [
+            {
+                "internalType": "address payable",
+                "name": "player1",
+                "type": "address"
+            },
+            {
+                "internalType": "address payable",
+                "name": "player2",
+                "type": "address"
+            },
+            {
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "player1Choice",
+                "type": "uint8"
+            },
+            {
+                "internalType": "enum RockPaperScissors.Choice",
+                "name": "player2Choice",
+                "type": "uint8"
+            },
+            {
+                "internalType": "bool",
+                "name": "player1MadeChoice",
+                "type": "bool"
+            },
+            {
+                "internalType": "bool",
+                "name": "player2MadeChoice",
+                "type": "bool"
+            },
+            {
+                "internalType": "enum RockPaperScissors.GameResult",
+                "name": "result",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "gameId",
+                "type": "uint256"
+            }
+        ],
+        "name": "getGameResult",
+        "outputs": [
+            {
+                "internalType": "enum RockPaperScissors.GameResult",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
+    const contractAddress = '0x6B26061bd1088B0AB5dF7c49f7bc0E47e7b61834';
+
+    const web3 = new Web3(window.ethereum);
+    let contract = new web3.eth.Contract(contractABI, contractAddress);
+    let account;
+    let currentGameId;
+
+    async function loadAccount() {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        account = accounts[0];
+    }
+
+    async function createGame() {
+        await loadAccount();
+        try {
+            await contract.methods.createGame().send({
+                from: account,
+                value: web3.utils.toWei('0.0001', 'ether')
+            });
+            currentGameId = await contract.methods.gameIdCounter().call() - 1;
+            document.getElementById("status").innerText = `Game created. Game ID: ${currentGameId}`;
+            document.getElementById("choice-buttons").style.display = "block";
+        } catch (error) {
+            console.error(error);
+            alert("Error creating game. Check console for details.");
+        }
+    }
+
+    async function joinGame() {
+        await loadAccount();
+        currentGameId = prompt("Enter Game ID to join:");
+        try {
+            await contract.methods.joinGame(currentGameId).send({
+                from: account,
+                value: web3.utils.toWei('0.0001', 'ether')
+            });
+            document.getElementById("status").innerText = `Joined game. Game ID: ${currentGameId}`;
+            document.getElementById("choice-buttons").style.display = "block";
+        } catch (error) {
+            console.error(error);
+            alert("Error joining game. Check console for details.");
+        }
+    }
+
+    async function makeChoice(choice) {
+        try {
+            const choiceEnum = { Rock: 0, Paper: 1, Scissors: 2 }[choice];
+            const player1 = await contract.methods.games(currentGameId).call().then(game => game.player1);
+
+            if (account.toLowerCase() === player1.toLowerCase()) {
+                await contract.methods.player1MakeChoice(currentGameId, choiceEnum).send({ from: account });
+            } else {
+                await contract.methods.player2MakeChoice(currentGameId, choiceEnum).send({ from: account });
+            }
+
+            document.getElementById("status").innerText = `Choice made. Waiting for another player choice.`;
+            getGameHistory();
+        } catch (error) {
+            console.error(error);
+            alert("Error making choice. Check console for details.");
+        }
+    }
+
+    async function getGameHistory() {
+        const gameCount = await contract.methods.gameIdCounter().call();
+        let historyHTML = "<h3>Game History</h3><ul>";
+
+        for (let i = 1; i < gameCount; i++) {
+            const game = await contract.methods.games(i).call();
+            if (game.result !== "3") {
+                const resultText = ["Player 1 Wins", "Player 2 Wins", "Draw", "Not Finished"];
+                historyHTML += `<li>Game ${i}: ${resultText[game.result]}</li>`;
+            }
+        }
+        historyHTML += "</ul>";
+        document.getElementById("history").innerHTML = historyHTML;
+    }
+
+    contract.events.GameResolved({}, (error, event) => {
+        if (error) {
+            console.error("Error on event", error);
+        } else {
+            getGameHistory();
+        }
+    });
+
+    window.ethereum.on('accountsChanged', (accounts) => {
+        account = accounts[0];
+    });
+</script>
+
+</body>
+</html>
+
